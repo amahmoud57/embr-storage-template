@@ -1,11 +1,19 @@
 const router = require('express').Router();
 
-const BLOB_BASE = process.env.EMBR_BLOB_URL || '/_embr/blob';
 const BLOB_KEY = process.env.EMBR_BLOB_KEY || '';
 
+// EMBR_BLOB_URL is an absolute URL injected by the platform (e.g. https://myapp.embr.dev/_embr/blob/)
+// If not set, we cannot make server-side blob requests — the relative path only works from the browser.
+const BLOB_BASE = process.env.EMBR_BLOB_URL;
+
+if (!BLOB_BASE) {
+  console.warn('EMBR_BLOB_URL is not set. Blob operations will fail until the environment has storage provisioned.');
+}
+
 function blobUrl(path) {
+  if (!BLOB_BASE) throw new Error('EMBR_BLOB_URL is not configured. Ensure blob storage is provisioned for this environment.');
   const base = BLOB_BASE.replace(/\/$/, '');
-  return base + '/' + path;
+  return base + (path ? '/' + path : '/');
 }
 
 // List files from blob storage
