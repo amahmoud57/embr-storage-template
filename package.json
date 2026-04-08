@@ -1,0 +1,22 @@
+{
+  "name": "embr-storage-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "File vault powered by Embr Blob Storage",
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"cd client && npx vite\"",
+    "build": "cd client && npx vite build --outDir ../dist",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "vite": "^5.4.0"
+  }
+}
