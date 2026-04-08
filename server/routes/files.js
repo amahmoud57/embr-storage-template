@@ -1,17 +1,19 @@
 const router = require('express').Router();
 
 const BLOB_KEY = process.env.EMBR_BLOB_KEY || '';
-
-// EMBR_BLOB_URL is an absolute URL injected by the platform (e.g. https://myapp.embr.dev/_embr/blob/)
-// If not set, we cannot make server-side blob requests — the relative path only works from the browser.
 const BLOB_BASE = process.env.EMBR_BLOB_URL;
 
 if (!BLOB_BASE) {
-  console.warn('EMBR_BLOB_URL is not set. Blob operations will fail until the environment has storage provisioned.');
+  console.warn('WARNING: EMBR_BLOB_URL is not set. Blob operations will fail.');
+}
+if (!BLOB_KEY) {
+  console.warn('WARNING: EMBR_BLOB_KEY is not set. List/upload/delete will be unauthorized.');
 }
 
+console.log('Blob config: EMBR_BLOB_URL=' + (BLOB_BASE ? BLOB_BASE : '(not set)'));
+
 function blobUrl(path) {
-  if (!BLOB_BASE) throw new Error('EMBR_BLOB_URL is not configured. Ensure blob storage is provisioned for this environment.');
+  if (!BLOB_BASE) throw new Error('EMBR_BLOB_URL is not configured.');
   const base = BLOB_BASE.replace(/\/$/, '');
   return base + (path ? '/' + path : '/');
 }
@@ -26,16 +28,20 @@ router.get('/', async (req, res, next) => {
     if (prefix) url += '&prefix=' + encodeURIComponent(prefix);
     if (continuationToken) url += '&continuationToken=' + encodeURIComponent(continuationToken);
 
+    console.log('Listing blobs: ' + url);
     const response = await fetch(url, {
       headers: BLOB_KEY ? { 'Authorization': 'Bearer ' + BLOB_KEY } : {},
     });
 
+    console.log('List response status: ' + response.status);
     if (!response.ok) {
       const errText = await response.text();
+      console.error('List failed: ' + response.status + ' ' + errText);
       return res.status(response.status).json({ error: 'List failed: ' + errText });
     }
 
     const data = await response.json();
+    console.log('Listed ' + (data.blobs ? data.blobs.length : 0) + ' blobs');
     res.json(data);
   } catch (err) { next(err); }
 });
@@ -52,6 +58,7 @@ router.post('/', async (req, res, next) => {
     const blobKey = folder + Date.now() + '-' + fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const fileBuffer = Buffer.from(fileBase64, 'base64');
 
+    console.log('Uploading blob: ' + blobKey + ' (' + fileBuffer.length + ' bytes)');
     const response = await fetch(blobUrl(blobKey), {
       method: 'PUT',
       headers: {
@@ -61,8 +68,10 @@ router.post('/', async (req, res, next) => {
       body: fileBuffer,
     });
 
+    console.log('Upload response status: ' + response.status);
     if (!response.ok) {
       const errText = await response.text();
+      console.error('Upload failed: ' + response.status + ' ' + errText);
       return res.status(502).json({ error: 'Upload failed: ' + errText });
     }
 
